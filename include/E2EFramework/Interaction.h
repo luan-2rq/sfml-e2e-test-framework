@@ -50,6 +50,7 @@ struct ExecutionResult
     int attempts{ 0 };
     float elapsedSeconds{ 0.f };
     std::string message;
+    std::string log;
 };
 
 ExecutionResult ExecuteUntilExpected(
