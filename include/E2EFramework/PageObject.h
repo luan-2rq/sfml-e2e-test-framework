@@ -34,4 +34,4 @@ private:
     Session& session_;
 };
 
-}  // namespace E2EFramework
+}
