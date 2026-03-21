@@ -1,6 +1,7 @@
 #include "E2EFramework/GameDriver.h"
 
 #include "Engine/Game.h"
+#include "GameConstants.h"
 #include "GameScene.h"
 
 #include <SFML/Graphics.hpp>
@@ -27,7 +28,10 @@ GameDriver::GameDriver(Mode mode, GameModelConfig cfg)
         return;
     }
 
-    game_ = std::make_unique<Engine::Game>("Memory Game E2E", 600, 630);
+    game_ = std::make_unique<Engine::Game>(
+        "Memory Game E2E",
+        MemoryGame::kWindowWidth,
+        MemoryGame::kWindowHeight);
     auto scene = std::make_unique<GameScene>(*game_, cfg);
     scenePtr_ = scene.get();
     game_->setScene(std::move(scene));
