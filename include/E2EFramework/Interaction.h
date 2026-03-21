@@ -51,6 +51,7 @@ struct ExecutionResult
     float elapsedSeconds{ 0.f };
     std::string message;
     std::string log;
+    std::string failureScreenshotPath;
 };
 
 ExecutionResult ExecuteUntilExpected(
@@ -63,6 +64,8 @@ struct SessionConfig
     std::function<std::unique_ptr<Driver>()> driverFactory;
     std::function<void(Driver&)> bootstrap;
     RetryPolicy retryPolicy{};
+    bool saveFailureScreenshotArtifact{ false };
+    std::string failureArtifactsDirectory{ "Artifacts/e2e_failures" };
 };
 
 class Session
@@ -77,6 +80,8 @@ public:
 
 private:
     RetryPolicy retryPolicy_;
+    bool saveFailureScreenshotArtifact_{ false };
+    std::string failureArtifactsDirectory_{ "Artifacts/e2e_failures" };
     std::unique_ptr<Driver> driver_;
 };
 

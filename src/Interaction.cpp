@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cctype>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -19,6 +21,48 @@ std::string formatSeconds(double seconds)
     return oss.str();
 }
 
+
+std::string sanitizeForFileName(const std::string& value)
+{
+    std::string sanitized;
+    sanitized.reserve(value.size());
+    for (const unsigned char c : value)
+    {
+        if (std::isalnum(c))
+        {
+            sanitized.push_back(static_cast<char>(c));
+            continue;
+        }
+
+        if (c == '-' || c == '_')
+        {
+            sanitized.push_back(static_cast<char>(c));
+            continue;
+        }
+
+        sanitized.push_back('_');
+    }
+
+    if (sanitized.empty())
+    {
+        sanitized = "interaction";
+    }
+
+    return sanitized;
+}
+
+std::string makeFailureScreenshotPath(const std::string& directory,
+                                     const std::string& interactionName)
+{
+    const auto now = std::chrono::system_clock::now();
+    const auto epochMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()).count();
+
+    std::ostringstream fileName;
+    fileName << sanitizeForFileName(interactionName)
+             << "-failure-" << epochMs << ".png";
+    return (std::filesystem::path(directory) / fileName.str()).string();
+}
 void appendLogLine(ExecutionResult& result, const std::string& interactionName, const std::string& line)
 {
     static const auto processStart = std::chrono::steady_clock::now();
@@ -191,6 +235,11 @@ ExecutionResult ExecuteUntilExpected(
 
 Session::Session(SessionConfig config)
     : retryPolicy_(config.retryPolicy),
+      saveFailureScreenshotArtifact_(config.saveFailureScreenshotArtifact),
+      failureArtifactsDirectory_(
+          config.failureArtifactsDirectory.empty()
+              ? std::string("Artifacts/e2e_failures")
+              : config.failureArtifactsDirectory),
       driver_(config.driverFactory ? config.driverFactory() : nullptr)
 {
     if (config.bootstrap)
@@ -211,7 +260,25 @@ const Driver& Session::driver() const
 
 ExecutionResult Session::Run(const Interaction& interaction)
 {
-    return ExecuteUntilExpected(*driver_, interaction, retryPolicy_);
+    ExecutionResult result = ExecuteUntilExpected(*driver_, interaction, retryPolicy_);
+    if (!result.passed && saveFailureScreenshotArtifact_)
+    {
+        std::filesystem::create_directories(failureArtifactsDirectory_);
+        const std::string screenshotPath = makeFailureScreenshotPath(
+            failureArtifactsDirectory_, interaction.name());
+
+        if (driver_->saveScreenshot(screenshotPath))
+        {
+            result.failureScreenshotPath = screenshotPath;
+            result.message += " Failure screenshot saved to " + screenshotPath + ".";
+        }
+        else
+        {
+            result.message += " Failure screenshot requested, but driver did not provide one.";
+        }
+    }
+
+    return result;
 }
 
 }

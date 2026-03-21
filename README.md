@@ -62,6 +62,19 @@ config.driverFactory = []() -> std::unique_ptr<E2EFramework::Driver> {
 config.bootstrap = [](E2EFramework::Driver& driver) {
     driver.advance(0.016f);
 };
+
+// Optional: save a screenshot artifact whenever an interaction times out.
+config.saveFailureScreenshotArtifact = true;
+config.failureArtifactsDirectory = "Artifacts/e2e_failures";
+```
+
+If enabled and the driver supports screenshots, timeout failures append the saved
+path to `ExecutionResult.message` and also set `ExecutionResult.failureScreenshotPath`.
+
+Drivers can opt in by overriding:
+
+```cpp
+bool saveScreenshot(const std::string& outputPath) override;
 ```
 
 ## Flaky Detection Repeat Option
