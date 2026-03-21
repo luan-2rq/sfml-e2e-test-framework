@@ -6,26 +6,14 @@
 namespace E2EFramework
 {
 
-Interaction::Interaction(Kind kind, std::string label)
-    : kind_(kind), label_(std::move(label))
+Interaction::Interaction(std::string label)
+    : label_(std::move(label))
 {
-}
-
-Interaction Interaction::Click(int cardIndex)
-{
-    Interaction interaction(Kind::Click, "Interaction.Click");
-    interaction.cardIndex_ = cardIndex;
-    return interaction;
-}
-
-Interaction Interaction::Restart()
-{
-    return Interaction(Kind::Restart, "Interaction.Restart");
 }
 
 Interaction Interaction::Custom(const std::string& name, Action action)
 {
-    Interaction interaction(Kind::Custom, name.empty() ? "Interaction.Custom" : name);
+    Interaction interaction(name.empty() ? "Interaction.Custom" : name);
     interaction.action_ = std::move(action);
     return interaction;
 }
@@ -33,27 +21,6 @@ Interaction Interaction::Custom(const std::string& name, Action action)
 Interaction& Interaction::When(Predicate predicate)
 {
     when_ = std::move(predicate);
-    return *this;
-}
-
-Interaction& Interaction::Do()
-{
-    if (kind_ == Kind::Click)
-    {
-        const int index = cardIndex_;
-        action_ = [index](GameDriver& driver)
-        {
-            driver.clickCard(index);
-        };
-    }
-    else if (kind_ == Kind::Restart)
-    {
-        action_ = [](GameDriver& driver)
-        {
-            driver.clickRestart();
-        };
-    }
-
     return *this;
 }
 
@@ -80,7 +47,7 @@ const std::string& Interaction::expectationDescription() const
     return expectationDescription_;
 }
 
-bool Interaction::canRun(const GameDriver& driver) const
+bool Interaction::canRun(const Driver& driver) const
 {
     if (!when_)
     {
@@ -90,7 +57,7 @@ bool Interaction::canRun(const GameDriver& driver) const
     return when_(driver);
 }
 
-bool Interaction::isExpected(const GameDriver& driver) const
+bool Interaction::isExpected(const Driver& driver) const
 {
     if (!expect_)
     {
@@ -100,7 +67,7 @@ bool Interaction::isExpected(const GameDriver& driver) const
     return expect_(driver);
 }
 
-void Interaction::run(GameDriver& driver) const
+void Interaction::run(Driver& driver) const
 {
     if (action_)
     {
@@ -109,7 +76,7 @@ void Interaction::run(GameDriver& driver) const
 }
 
 ExecutionResult ExecuteUntilExpected(
-    GameDriver& driver,
+    Driver& driver,
     const Interaction& interaction,
     const RetryPolicy& policy)
 {
@@ -150,27 +117,27 @@ ExecutionResult ExecuteUntilExpected(
 
 Session::Session(SessionConfig config)
     : retryPolicy_(config.retryPolicy),
-      driver_(config.mode, config.modelConfig)
+      driver_(config.driverFactory ? config.driverFactory() : nullptr)
 {
     if (config.bootstrap)
     {
-        config.bootstrap(driver_);
+        config.bootstrap(*driver_);
     }
 }
 
-GameDriver& Session::driver()
+Driver& Session::driver()
 {
-    return driver_;
+    return *driver_;
 }
 
-const GameDriver& Session::driver() const
+const Driver& Session::driver() const
 {
-    return driver_;
+    return *driver_;
 }
 
 ExecutionResult Session::Run(const Interaction& interaction)
 {
-    return ExecuteUntilExpected(driver_, interaction, retryPolicy_);
+    return ExecuteUntilExpected(*driver_, interaction, retryPolicy_);
 }
 
 }

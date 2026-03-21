@@ -6,7 +6,7 @@ namespace E2EFramework
 {
 
 // ---------------------------------------------------------------------------
-// PageObject — base class for page objects that wrap a GameDriver.
+// PageObject — base class for page objects that wrap a framework Driver.
 //
 // Usage:
 //   GameBoardPage board(session);
@@ -23,7 +23,7 @@ public:
 
 protected:
     [[nodiscard]] Session& session() { return session_; }
-    [[nodiscard]] const GameDriver& driver() const { return session_.driver(); }
+    [[nodiscard]] const Driver& driver() const { return session_.driver(); }
 
     ExecutionResult run(Interaction interaction) const
     {

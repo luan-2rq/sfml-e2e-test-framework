@@ -1,8 +1,9 @@
 #pragma once
 
-#include "E2EFramework/GameDriver.h"
+#include "E2EFramework/Driver.h"
 
 #include <functional>
+#include <memory>
 #include <string>
 
 namespace E2EFramework
@@ -11,37 +12,25 @@ namespace E2EFramework
 class Interaction
 {
 public:
-    using Predicate = std::function<bool(const GameDriver&)>;
-    using Action = std::function<void(GameDriver&)>;
+    using Predicate = std::function<bool(const Driver&)>;
+    using Action = std::function<void(Driver&)>;
 
-    static Interaction Click(int cardIndex);
-    static Interaction Restart();
     static Interaction Custom(const std::string& name, Action action);
 
     Interaction& When(Predicate predicate);
-    Interaction& Do();
     Interaction& Do(Action action);
     Interaction& ThenExpect(Predicate predicate, const std::string& expectationDescription = "condition to become true");
 
     [[nodiscard]] const std::string& name() const;
     [[nodiscard]] const std::string& expectationDescription() const;
 
-    [[nodiscard]] bool canRun(const GameDriver& driver) const;
-    [[nodiscard]] bool isExpected(const GameDriver& driver) const;
-    void run(GameDriver& driver) const;
+    [[nodiscard]] bool canRun(const Driver& driver) const;
+    [[nodiscard]] bool isExpected(const Driver& driver) const;
+    void run(Driver& driver) const;
 
 private:
-    enum class Kind
-    {
-        Click,
-        Restart,
-        Custom
-    };
+    explicit Interaction(std::string label);
 
-    explicit Interaction(Kind kind, std::string label);
-
-    Kind kind_;
-    int cardIndex_{ -1 };
     std::string label_;
     Predicate when_;
     Action action_;
@@ -64,15 +53,14 @@ struct ExecutionResult
 };
 
 ExecutionResult ExecuteUntilExpected(
-    GameDriver& driver,
+    Driver& driver,
     const Interaction& interaction,
     const RetryPolicy& policy = RetryPolicy{});
 
 struct SessionConfig
 {
-    GameDriver::Mode mode{ GameDriver::Mode::Headless };
-    GameModelConfig modelConfig{};
-    std::function<void(GameDriver&)> bootstrap;
+    std::function<std::unique_ptr<Driver>()> driverFactory;
+    std::function<void(Driver&)> bootstrap;
     RetryPolicy retryPolicy{};
 };
 
@@ -81,14 +69,14 @@ class Session
 public:
     explicit Session(SessionConfig config = SessionConfig{});
 
-    [[nodiscard]] GameDriver& driver();
-    [[nodiscard]] const GameDriver& driver() const;
+    [[nodiscard]] Driver& driver();
+    [[nodiscard]] const Driver& driver() const;
 
     ExecutionResult Run(const Interaction& interaction);
 
 private:
     RetryPolicy retryPolicy_;
-    GameDriver driver_;
+    std::unique_ptr<Driver> driver_;
 };
 
 }
