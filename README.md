@@ -4,7 +4,7 @@ A flexible, application-agnostic end-to-end testing framework for C++ applicatio
 
 ## Example Test Run
 
-The GIF below shows an end-to-end test running against the Memory Game integration.
+The GIF below shows an end-to-end test running against a Memory Game.
 
 ![E2E Test Example: Memory Game](docs/example-e2e.gif)
 
