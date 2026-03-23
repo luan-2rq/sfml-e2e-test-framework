@@ -1,11 +1,19 @@
-# MemoryGame E2E Framework
+# E2E Framework
 
 This module is a standalone CMake project in `E2EFramework/`.
 
-The framework is game-agnostic and depends only on Engine.
+The framework is application-agnostic and depends only on Engine.
 It provides only generic driver/session orchestration plus a small set of
-baseline predicates in `E2EFramework/Conditions.h`.
-Game-specific drivers, actions, and model predicates live outside this module.
+baseline predicates in `include/E2EFramework/Conditions.h`.
+App-specific drivers, actions, and model predicates live outside this module.
+
+## Public Headers
+
+- `include/E2EFramework/Driver.h`
+- `include/E2EFramework/Interaction.h`
+- `include/E2EFramework/Conditions.h`
+- `include/E2EFramework/PageObject.h`
+- `include/E2EFramework/TestCategories.h`
 
 ## Core Pattern
 
@@ -14,10 +22,10 @@ Use structured interaction steps:
 ```cpp
 auto result = session.Run(
     E2EFramework::Interaction::Custom("click-card", [](E2EFramework::Driver& driver) {
-            // Game-specific action implemented by caller.
+            // App-specific action implemented by caller.
         })
         .ThenExpect([](const E2EFramework::Driver& driver) {
-            // Game-specific condition implemented by caller.
+            // App-specific condition implemented by caller.
             return true;
         }, "clicked card to become face up")
 );
@@ -37,7 +45,7 @@ Every interaction also emits timestamped execution logs to stdout for the
 [0.024s] [Click card 0] EXPECT satisfied after 1 attempt(s) at elapsed=0.000s
 ```
 
-For generic checks that do not depend on any game model, use the framework
+For generic checks that do not depend on any app model, use the framework
 predicates directly:
 
 ```cpp
@@ -48,15 +56,15 @@ auto result = session.Run(
 );
 ```
 
-## User-Provided Game Bootstrap
+## User-Provided App Bootstrap
 
 `SessionConfig` exposes `driverFactory` and `bootstrap` so consumers can
-provide game-specific setup logic:
+provide app-specific setup logic:
 
 ```cpp
 E2EFramework::SessionConfig config;
 config.driverFactory = []() -> std::unique_ptr<E2EFramework::Driver> {
-    // Return your game-specific driver implementation.
+    // Return your app-specific driver implementation.
     return makeDriver();
 };
 config.bootstrap = [](E2EFramework::Driver& driver) {
@@ -65,7 +73,7 @@ config.bootstrap = [](E2EFramework::Driver& driver) {
 
 // Optional: save a screenshot artifact whenever an interaction times out.
 config.saveFailureScreenshotArtifact = true;
-config.failureArtifactsDirectory = "Artifacts/e2e_failures";
+config.failureArtifactsDirectory = "e2e_failures";
 ```
 
 If enabled and the driver supports screenshots, timeout failures append the saved
@@ -77,48 +85,27 @@ Drivers can opt in by overriding:
 bool saveScreenshot(const std::string& outputPath) override;
 ```
 
-## Flaky Detection Repeat Option
+## Test Category Macros
 
-`memorygame_e2e` supports repeat count via:
+For category-friendly test naming, use macros from
+`include/E2EFramework/TestCategories.h`:
 
-- `MEMORYGAME_E2E_REPEAT=<n>`
-- `--repeat=<n>`
+```cpp
+#include "E2EFramework/TestCategories.h"
 
-Examples:
+E2E_TEST(BoardPage, CardFlipsOnClick, Smoke)
+{
+    // test logic
+}
 
-```bash
-MEMORYGAME_E2E_REPEAT=10 ./Build/bin/memorygame_e2e
-./Build/bin/memorygame_e2e --repeat=10 --gtest_filter=E2E_Headless*
+E2E_TEST_F(BoardFixture, RestartResetsSession, Regression)
+{
+    // test logic
+}
 ```
 
-## Headless vs Headed
+## Example Game
 
-- CI: headless mode (default)
-- Local visual runs: configure with `-DMEMORYGAME_HEADED_E2E=ON`
+Example integration run output (GIF):
 
-## GIF Capture
-
-For a headed E2E run with execution logs rendered beside the gameplay, use:
-
-```bash
-./Tests/Tools/run_e2e_gif.sh
-```
-
-Optional test filter:
-
-```bash
-./Tests/Tools/run_e2e_gif.sh Board_Cat_Smoke.RestartResetsGame
-```
-
-What it does:
-
-- configures a headed build in `BuildHeadedGif/`
-- captures rendered frames via `MEMORYGAME_CAPTURE_FRAMES_DIR`
-- writes the timestamped `WHEN/DO/THEN/EXPECT` logs to `Artifacts/e2e_gif/e2e.log`
-- composes `Artifacts/e2e_gif/memorygame_e2e.gif` with the game on the left and logs on the right
-
-Requirements:
-
-- `ffmpeg`
-- `python3`
-- a desktop session that can open the headed SFML window
+![Example E2E test run](docs/example-e2e.gif)
