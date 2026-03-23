@@ -2,7 +2,11 @@
 
 A flexible, application-agnostic end-to-end testing framework for C++ applications. This framework provides robust driver/session orchestration, interaction management, and assertion capabilities built on top of the Engine module.
 
----
+## Example Test Run
+
+The GIF below shows an end-to-end test running against the Memory Game integration.
+
+![E2E Test Example: Memory Game](docs/example-e2e.gif)
 
 ## Table of Contents
 
